@@ -192,6 +192,10 @@ class OpenGLScene(QGraphicsScene):
         
         GL.glTexImage2D(
             GL.GL_TEXTURE_2D, 0, GL.GL_RGB, ix, iy, 0, 
+            GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, None)
+
+        GL.glTexSubImage2D(
+            GL.GL_TEXTURE_2D, 0, 0, 0, ix, iy, 
             GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, self.image)
 
         return ID
