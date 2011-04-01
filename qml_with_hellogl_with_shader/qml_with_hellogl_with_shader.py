@@ -32,7 +32,6 @@ void main(void)
 
 frag_shader_code = '''
 uniform sampler2D image;
-uniform vec2 scale;
 
 void main(void)
 {
@@ -462,6 +461,7 @@ def main(argv):
     overlay_widget.setAttribute(QtCore.Qt.WA_TranslucentBackground)
     
     view.setScene(scene)
+    print view.children()
     view.show()
     
     view.resize(1024,768)
@@ -472,3 +472,4 @@ def main(argv):
 
 if __name__ == '__main__':
     main(sys.argv)
+
