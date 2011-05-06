@@ -189,6 +189,8 @@ class OpenGLScene(QGraphicsScene):
 
         ID = GL.glGenTextures(1)
         
+        GL.glBindTexture(GL.GL_TEXTURE_2D, ID)
+
         GL.glTexImage2D(
             GL.GL_TEXTURE_2D, 0, GL.GL_RGB, ix, iy, 0, 
             GL.GL_RGBA, GL.GL_UNSIGNED_BYTE, None)
@@ -200,8 +202,9 @@ class OpenGLScene(QGraphicsScene):
         return ID
 
     def drawBackground(self, painter, rect):
-
-        if not painter.paintEngine().type() == QtGui.QPaintEngine.OpenGL:
+        
+        if not (painter.paintEngine().type() == QtGui.QPaintEngine.OpenGL or
+            painter.paintEngine().type() == QtGui.QPaintEngine.OpenGL2):
             QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '\
                         +'to be set as viewport on the '\
                         +'graphics view')
@@ -222,6 +225,7 @@ class OpenGLScene(QGraphicsScene):
 
             self.program.link()
             
+            print 'initialising'
             self.tex = self.loadImage('test.jpg')
             self.textureLocation = self.program.uniformLocation("image")
 
@@ -231,6 +235,8 @@ class OpenGLScene(QGraphicsScene):
         GL.glPushMatrix()
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
+        
+        GL.glBindTexture(GL.GL_TEXTURE_2D, self.tex)
 
         self.model.render()
         
@@ -442,8 +448,11 @@ def main(argv):
     gl_format = QtOpenGL.QGLFormat()
     gl_format.setSampleBuffers(True)
 
+    gl_format.setVersion(1,4)
     gl_widget = QtOpenGL.QGLWidget(gl_format)
-
+    print gl_format.majorVersion()
+    print gl_format.minorVersion()
+    
     view = GraphicsView()
 
     view.setViewport(gl_widget)

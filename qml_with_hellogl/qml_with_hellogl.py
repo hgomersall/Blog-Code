@@ -145,8 +145,9 @@ class OpenGLScene(QGraphicsScene):
         return
 
     def drawBackground(self, painter, rect):
-
-        if not painter.paintEngine().type() == QtGui.QPaintEngine.OpenGL:
+        
+        if not painter.paintEngine().type() == QtGui.QPaintEngine.OpenGL2:
+            print painter.paintEngine().type()
             QtCore.qWarning('OpenGLScene: drawBackground needs a QGLWidget '\
                         +'to be set as viewport on the '\
                         +'graphics view')
@@ -168,7 +169,9 @@ class OpenGLScene(QGraphicsScene):
         GL.glPopMatrix()
 
         painter.endNativePainting()
-    
+        
+        QtCore.QTimer.singleShot(20, self.update)
+
     def mouseMoveEvent(self, event):
 
         QGraphicsScene.mouseMoveEvent(self, event)
