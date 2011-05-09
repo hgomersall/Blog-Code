@@ -1,0 +1,9 @@
+Demonstrates a bug in using PyOpenGL in conjunction with QML.
+
+Two bugs are apparent that both cause the program to hang with garbage
+on the screen. The following cause the symptoms:
+
+1) Importing GL in multiple files
+or
+2) Importing GL before numpy (even if numpy is not used explicitly in the
+module)
