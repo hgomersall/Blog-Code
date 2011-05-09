@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 
 import sys
+
+# Commenting out numpy causes the hang (despite
+# numpy not being used anywhere in this module)
 import numpy
+
 import PySide
 from PySide import QtCore, QtOpenGL, QtGui
 from PySide.QtGui import QGraphicsScene, QGraphicsView, QApplication
@@ -11,6 +15,10 @@ from overlay_widget_simple import OverlayWidget
 from renderer_simple import Renderer
 
 from OpenGL import GL
+
+# Importing numpy *after* GL is not sufficient, it 
+# needs to be done before.
+#import numpy
 
 class GraphicsView(QGraphicsView):
 

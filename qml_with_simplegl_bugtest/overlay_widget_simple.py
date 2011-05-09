@@ -4,6 +4,8 @@ from PySide import QtGui, QtCore
 from PySide.QtDeclarative import QDeclarativeView
 from PySide.QtCore import QUrl
 
+# Importing GL here also causes everything to break
+#from OpenGL import GL
 
 class OverlayWidget(QtGui.QWidget):
     

@@ -1,6 +1,8 @@
 #!/usr/bin/env python
 
+# Importing GL here causes it to break
 #from OpenGL import GL
+
 from PySide import QtGui
 
 class Renderer(object):
@@ -8,7 +10,9 @@ class Renderer(object):
     def __init__(self, parent, gl_class):
         
         self.parent = parent
-
+        
+        # Workaround: we pass GL explicitly
+        # to this class.
         self.gl_class = gl_class
 
     def render(self):
