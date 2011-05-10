@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 
+# Calling this file doesn't work
+
 import sys
 from PySide.QtGui import QApplication
 from gl_simple import DisplayWidget
