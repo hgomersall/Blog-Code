@@ -78,33 +78,57 @@ class OpenGLScene(QGraphicsScene):
 
         painter.endNativePainting()
     
+class DisplayWidget(QtGui.QWidget):
+
+    def __init__(self, *args, **kwargs):
+
+
+        super(DisplayWidget, self).__init__(*args, **kwargs)
+
+        # We draw to an OpenGL scene, so instantiate
+        # the QGLWidget.
+        gl_format = QtOpenGL.QGLFormat()
+        gl_format.setSampleBuffers(True)
+
+        self.gl_widget = QtOpenGL.QGLWidget(gl_format)
+
+        # Set up the view
+        self.view = GraphicsView()
+        self.view.setViewport(self.gl_widget)
+        self.view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
+        
+        # Set up the scene
+        self.scene = OpenGLScene()
+        
+        # Add the controls to it
+        self.overlay_widget = OverlayWidget()
+        self.scene.addWidget(self.overlay_widget)
+
+        self.overlay_widget.move(QtCore.QPoint(0,0))
+        self.overlay_widget.setAttribute(QtCore.Qt.WA_TranslucentBackground)
+
+        # Assign in the scene to the view.
+        self.view.setScene(self.scene)
+
+        #self.view.show()
+        #self.view.resize(800,600)
+        
+        # Set the scene and view to be a child of this class
+        self.view.setParent(self)
+        self.scene.setParent(self)
+
+    def resizeEvent(self, event):
+        ''' Called when the widget is resized
+        '''
+        # Call the view resize method
+        self.view.resize(event.size())
 
 def main(argv):
     app = QApplication(argv)
 
-    gl_format = QtOpenGL.QGLFormat()
-    gl_format.setSampleBuffers(True)
-
-    gl_widget = QtOpenGL.QGLWidget(gl_format)
-    
-    view = GraphicsView()
-
-    view.setViewport(gl_widget)
-    view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-    
-    scene = OpenGLScene()
-
-    overlay_widget = OverlayWidget()     
-    scene.addWidget(overlay_widget)
-
-    overlay_widget.move(QtCore.QPoint(0,0))
-    overlay_widget.setAttribute(QtCore.Qt.WA_TranslucentBackground)
-    
-    view.setScene(scene)
-    print view.children()
-    view.show()
-    
-    view.resize(800,600)
+    widget = DisplayWidget()
+    widget.show()
+    widget.resize(800,600)
 
     sys.exit(app.exec_())
 
