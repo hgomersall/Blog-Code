@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
-# Calling this wrapper does work
+# Calling this wrapper does work for the ATI
+# HD 4350 but not the Intel GMA X3100
 
 import sys
 from PySide.QtGui import QApplication
