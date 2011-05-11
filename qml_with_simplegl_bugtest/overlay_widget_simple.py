@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
-from PySide import QtGui, QtCore
-from PySide.QtDeclarative import QDeclarativeView
-from PySide.QtCore import QUrl
+from PyQt4 import QtGui, QtCore
+from PyQt4.QtDeclarative import QDeclarativeView
+from PyQt4.QtCore import QUrl
 
 # Importing GL here also causes everything to break
 #from OpenGL import GL

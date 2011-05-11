@@ -6,10 +6,10 @@ import sys
 # numpy not being used anywhere in this module)
 import numpy
 
-import PySide
-from PySide import QtCore, QtOpenGL, QtGui
-from PySide.QtGui import QGraphicsScene, QGraphicsView, QApplication
-from PySide.QtDeclarative import QDeclarativeView
+import PyQt4
+from PyQt4 import QtCore, QtOpenGL, QtGui
+from PyQt4.QtGui import QGraphicsScene, QGraphicsView, QApplication
+from PyQt4.QtDeclarative import QDeclarativeView
 
 from overlay_widget_simple import OverlayWidget
 from renderer_simple import Renderer
@@ -33,15 +33,12 @@ class GraphicsView(QGraphicsView):
         scene = self.scene()
         if scene:
             new_rect = QtCore.QRect(QtCore.QPoint(0,0), event.size())
-            scene.setSceneRect(new_rect)
+            scene.setSceneRect(QtCore.QRectF(new_rect))
 
         QGraphicsView.resizeEvent(self,event)
 
 class OpenGLScene(QGraphicsScene):
     
-    sliders_changed = QtCore.Signal(tuple)
-    rotation_changed = QtCore.Signal(tuple)
-
     def __init__(self, *args):
         super(OpenGLScene, self).__init__(*args)
 

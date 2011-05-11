@@ -3,7 +3,7 @@
 # Importing GL here causes it to break
 #from OpenGL import GL
 
-from PySide import QtGui
+from PyQt4 import QtGui
 
 class Renderer(object):
     

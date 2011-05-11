@@ -4,7 +4,7 @@
 # HD 4350 but not the Intel GMA X3100
 
 import sys
-from PySide.QtGui import QApplication
+from PyQt4.QtGui import QApplication
 from gl_simple import DisplayWidget
 
 def make_it_work(argv):
