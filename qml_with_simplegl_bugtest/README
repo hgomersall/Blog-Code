@@ -1,3 +1,13 @@
+### UPDATE: The bug seems to be caused by an Ubuntu 10.10 -> 11.04
+### regression. I've no idea as to the cause, or even the exact symptoms
+### (except to say that it seemed to caused by the Mesa driver - the 
+### NVidia and ATI proprietary drivers worked fine).
+### Those symptoms described below seemed to be the tip of the iceberg
+### as regards what made it break. Adding the xorg-edges PPA to upgrade
+### to the git version of various things has apparently made the problem
+### go away. This is not ideal, but I (tentatively) consider the problem 
+### solved.
+
 Demonstrates a bug in using PyOpenGL in conjunction with QML.
 
 Two bugs are apparent that both cause the program to hang with garbage
