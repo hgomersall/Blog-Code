@@ -33,7 +33,7 @@ class GraphicsView(QGraphicsView):
         scene = self.scene()
         if scene:
             new_rect = QtCore.QRect(QtCore.QPoint(0,0), event.size())
-            scene.setSceneRect(new_rect)
+            scene.setSceneRect(QtCore.QRectF(new_rect))
 
         QGraphicsView.resizeEvent(self,event)
 
