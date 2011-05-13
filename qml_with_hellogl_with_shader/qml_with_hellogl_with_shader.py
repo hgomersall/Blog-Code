@@ -448,10 +448,7 @@ def main(argv):
     gl_format = QtOpenGL.QGLFormat()
     gl_format.setSampleBuffers(True)
 
-    gl_format.setVersion(1,4)
     gl_widget = QtOpenGL.QGLWidget(gl_format)
-    print gl_format.majorVersion()
-    print gl_format.minorVersion()
     
     view = GraphicsView()
 
