@@ -1,2 +1,8 @@
+Code tested with:
+Python 2.6 and Python 2.7
+PyOpenGL 3.0.1
+PySide 1.0.1
+Qt 4.7
+
 Blog post:
 http://hgomersall.wordpress.com/2011/03/31/rendering-textures-in-glsl-using-python/
