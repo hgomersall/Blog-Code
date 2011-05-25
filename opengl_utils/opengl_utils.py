@@ -10,11 +10,11 @@
 #
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU Lesser General Public License for more details.
 #
 # You should have received a copy of the GNU Lesser General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 # Henry Gomersall
 # heng@kedevelopments.co.uk
@@ -54,7 +54,18 @@ GL_TYPES = {GL.GL_UNSIGNED_BYTE:           1,
         GL.GL_UNSIGNED_INT_2_10_10_10_REV: 4}
 
 class TextureStream2D(object):
-    ''' A class that defines a texture stream.
+    ''' A class that defines a 2D texture stream. A
+    texture stream in this context is an object through
+    which a texture that is used in rendering is
+    updated repeatedly. The intention of this class
+    is to provide a simple way in which users can
+    make use of pixel buffer objects to stream
+    textures asynchronously without having to
+    worry about synchronising the uploads with
+    the rendering. It makes use of multiple
+    buffers (2 by default) so any rendering code
+    has something to work with whilst an upload
+    is going on.
 
     The idea is that the most recent texture upload is
     bound when instance.bind_texture() is called.
@@ -64,6 +75,12 @@ class TextureStream2D(object):
     the texture before upload if the data is not
     going to overwrite the non-blank sections of 
     the texture because it isn't big enough.
+
+    If an attempt is made to upload a texture whilst
+    non of the previous uploads have finished and
+    there are no more remaining buffers that are 
+    currently unused (either for upload or for
+    reading) then the data will just be ignored.
 
     The class can be used as a texture context manager.
     In this case, the textures are uploaded as 
@@ -150,7 +167,7 @@ class TextureStream2D(object):
         
             # Set up the texture parameters
             # Nearest neighbour filters, clamping texture coordinates to 
-            # between 0 and 1.
+            # between 0 and 1.http://docs.python.org/library/exceptions.html#exceptions.RuntimeError
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
                     GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
@@ -239,38 +256,38 @@ class TextureStream2D(object):
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture_id)
     
     def update_texture(self, data):
-        '''Update the texture with a passed
-        data array.
+        '''Update the texture with a passed data array.
 
-        The data is expected to be a
-        three-dimensional array of size NxMxP
-        (c-ordering), where N and M are the
-        dimensions of the image and P is the
-        number of array elements per texel. The
-        type should agree with that set by the
-        gl_type argument at instantiation. P
-        only really makes a lot of sense if
-        each array element that together make 
-        up a texel are the same size. For 
-        example, if the type is 
-        GL_UNSIGNED_SHORT_5_5_5_1, then its 2
-        bytes per texel, but with a differing
-        number of bits per colour, in which case
-        the array can just be two-dimensional.
-        The crucial test is that 
-        data.itemsize*P is equal to the number
-        of bytes per texel expected by gl_type.
-        Its up to you how the data is packed
-        beyond that.
+        The data is expected to be a three-dimensional
+        array of size NxMxP (c-ordering), where N and M
+        are the dimensions of the image and P is the
+        number of array elements per texel. The type
+        should agree with that set by the gl_type argument
+        at instantiation. P only really makes a lot of
+        sense if each array element that together make up
+        a texel are the same size. For example, if the
+        type is GL_UNSIGNED_SHORT_5_5_5_1, then its 2
+        bytes per texel, but with a differing number of
+        bits per colour, in which case the array can just
+        be two-dimensional.  The crucial test is that
+        data.itemsize*P is equal to the number of bytes
+        per texel expected by gl_type.  Its up to you how
+        the data is packed beyond that.
 
-        This method will fill the texture from
-        the beginning of the texture memory.
+        This method will fill the texture from the
+        beginning of the texture memory.
         
-        If the data is smaller than the texture
-        then outside the data is left untouched.
+        If the data is smaller than the texture then
+        outside the data is left untouched.
         
-        If the data is bigger than the texture,
-        an exception is raised.
+        If the data is bigger than the texture, an
+        exception is raised.
+
+        If an attempt is made to upload a texture whilst
+        non of the previous uploads have finished and
+        there are no more remaining buffers that are 
+        currently unused (either for upload or for
+        reading) then the data will just be ignored.
         '''
         if not self.__set_next_write_idx():
             return None
@@ -373,40 +390,38 @@ class TextureStream2D(object):
         self.__copy_sync[self.__write_idx] = GLSyncObject()
 
     def update_texture_with_clear(self, data):
-        ''' Update the texture with a passed
-        data array.
+        ''' Update the texture with a passed data array.
 
-        The data is expected to be a
-        three-dimensional array of size NxMxP
-        (c-ordering), where N and M are the
-        dimensions of the image and P is the
-        number of array elements per texel. The
-        type should agree with that set by the
-        gl_type argument at instantiation. P
-        only really makes a lot of sense if
-        each array element that together make 
-        up a texel are the same size. For 
-        example, if the type is 
-        GL_UNSIGNED_SHORT_5_5_5_1, then its 2
-        bytes per texel, but with a differing
-        number of bits per colour, in which case
-        the array can just be two-dimensional.
-        The crucial test is that 
-        data.itemsize*P is equal to the number
-        of bytes per texel expected by gl_type.
-        Its up to you how the data is packed
-        beyond that.
+        The data is expected to be a three-dimensional
+        array of size NxMxP (c-ordering), where N and M
+        are the dimensions of the image and P is the
+        number of array elements per texel. The type
+        should agree with that set by the gl_type argument
+        at instantiation. P only really makes a lot of
+        sense if each array element that together make up
+        a texel are the same size. For example, if the
+        type is GL_UNSIGNED_SHORT_5_5_5_1, then its 2
+        bytes per texel, but with a differing number of
+        bits per colour, in which case the array can just
+        be two-dimensional.  The crucial test is that
+        data.itemsize*P is equal to the number of bytes
+        per texel expected by gl_type.  Its up to you how
+        the data is packed beyond that.
 
-        This method will fill the texture from
-        the beginning of the texture memory.
-        If the shape of data is different to
-        a previous call to this method, then
-        the texture is cleared first. The 
-        assumption is that the size will change
-        rarely.
+        This method will fill the texture from the
+        beginning of the texture memory.  If the shape of
+        data is different to a previous call to this
+        method, then the texture is cleared first. The
+        assumption is that the size will change rarely.
         
-        If the data is bigger than the texture,
-        an exception is raised.
+        If the data is bigger than the texture, an
+        exception is raised.
+
+        If an attempt is made to upload a texture whilst
+        non of the previous uploads have finished and
+        there are no more remaining buffers that are 
+        currently unused (either for upload or for
+        reading) then the data will just be ignored.
         '''
         if not self.__set_next_write_idx():
             return None
