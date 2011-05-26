@@ -32,26 +32,44 @@ import ctypes
 # The following is required knowledge to minimise
 # the risk of segfaulting when copying data out
 # of the numpy arrays.
-GL_TYPES = {GL.GL_UNSIGNED_BYTE:           1,
-        GL.GL_BYTE:                        1,
+# The boolean in the tuple describes whether we
+# need to include the format as well in order
+# to decide how big each texel should be
+GL_TYPES = {GL.GL_UNSIGNED_BYTE:           (1, True),
+        GL.GL_BYTE:                        (1, True),
         #GL.GL_BITMAP - We ignore this.
-        GL.GL_UNSIGNED_SHORT:              2,
-        GL.GL_SHORT:                       2,
-        GL.GL_UNSIGNED_INT:                4,
-        GL.GL_INT:                         4,
-        GL.GL_FLOAT:                       4,
-        GL.GL_UNSIGNED_BYTE_3_3_2:         1,
-        GL.GL_UNSIGNED_BYTE_2_3_3_REV:     1,
-        GL.GL_UNSIGNED_SHORT_5_6_5:        2,
-        GL.GL_UNSIGNED_SHORT_5_6_5_REV:    2,
-        GL.GL_UNSIGNED_SHORT_4_4_4_4:      2,
-        GL.GL_UNSIGNED_SHORT_4_4_4_4_REV:  2,
-        GL.GL_UNSIGNED_SHORT_5_5_5_1:      2,
-        GL.GL_UNSIGNED_SHORT_1_5_5_5_REV:  2,
-        GL.GL_UNSIGNED_INT_8_8_8_8:        4,
-        GL.GL_UNSIGNED_INT_8_8_8_8_REV:    4,
-        GL.GL_UNSIGNED_INT_10_10_10_2:     4,
-        GL.GL_UNSIGNED_INT_2_10_10_10_REV: 4}
+        GL.GL_UNSIGNED_SHORT:              (2, True),
+        GL.GL_SHORT:                       (2, True),
+        GL.GL_UNSIGNED_INT:                (4, True),
+        GL.GL_INT:                         (4, True),
+        GL.GL_FLOAT:                       (4, True),
+        GL.GL_UNSIGNED_BYTE_3_3_2:         (1, False),
+        GL.GL_UNSIGNED_BYTE_2_3_3_REV:     (1, False),
+        GL.GL_UNSIGNED_SHORT_5_6_5:        (2, False),
+        GL.GL_UNSIGNED_SHORT_5_6_5_REV:    (2, False),
+        GL.GL_UNSIGNED_SHORT_4_4_4_4:      (2, False),
+        GL.GL_UNSIGNED_SHORT_4_4_4_4_REV:  (2, False),
+        GL.GL_UNSIGNED_SHORT_5_5_5_1:      (2, False),
+        GL.GL_UNSIGNED_SHORT_1_5_5_5_REV:  (2, False),
+        GL.GL_UNSIGNED_INT_8_8_8_8:        (4, False),
+        GL.GL_UNSIGNED_INT_8_8_8_8_REV:    (4, False),
+        GL.GL_UNSIGNED_INT_10_10_10_2:     (4, False),
+        GL.GL_UNSIGNED_INT_2_10_10_10_REV: (4, False)}
+
+
+GL_FORMATS = {\
+        GL.GL_COLOR_INDEX      1,
+        GL.GL_RED              1,       
+        GL.GL_GREEN            1,
+        GL.GL_BLUE             1,
+        GL.GL_ALPHA            1,
+        GL.GL_RGB              3,
+        GL.GL_BGR              3,
+        GL.GL_RGBA             4,
+        GL.GL_BGRA             4,
+        GL.GL_LUMINANCE        1,
+        GL.GL_LUMINANCE_ALPHA  2,
+        GL.GL_DEPTH_COMPONENT  2,}
 
 class TextureStream2D(object):
     ''' A class that defines a 2D texture stream. A
@@ -167,7 +185,7 @@ class TextureStream2D(object):
         
             # Set up the texture parameters
             # Nearest neighbour filters, clamping texture coordinates to 
-            # between 0 and 1.http://docs.python.org/library/exceptions.html#exceptions.RuntimeError
+            # between 0 and 1.
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
                     GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
@@ -335,6 +353,7 @@ class TextureStream2D(object):
         # A bit of data checking...
         _data = numpy.atleast_3d(data)
         
+        print _data.shape[2], GL_TYPES[self.__gl_type]
         if not data.itemsize*_data.shape[2] == \
                 GL_TYPES[self.__gl_type]:
             raise ValueError('The number of bytes per texel for the '\
