@@ -58,18 +58,18 @@ GL_TYPES = {GL.GL_UNSIGNED_BYTE:           (1, True),
 
 
 GL_FORMATS = {\
-        GL.GL_COLOR_INDEX      1,
-        GL.GL_RED              1,       
-        GL.GL_GREEN            1,
-        GL.GL_BLUE             1,
-        GL.GL_ALPHA            1,
-        GL.GL_RGB              3,
-        GL.GL_BGR              3,
-        GL.GL_RGBA             4,
-        GL.GL_BGRA             4,
-        GL.GL_LUMINANCE        1,
-        GL.GL_LUMINANCE_ALPHA  2,
-        GL.GL_DEPTH_COMPONENT  2,}
+        GL.GL_COLOR_INDEX:      1,
+        GL.GL_RED:              1,       
+        GL.GL_GREEN:            1,
+        GL.GL_BLUE:             1,
+        GL.GL_ALPHA:            1,
+        GL.GL_RGB:              3,
+        GL.GL_BGR:              3,
+        GL.GL_RGBA:             4,
+        GL.GL_BGRA:             4,
+        GL.GL_LUMINANCE:        1,
+        GL.GL_LUMINANCE_ALPHA:  2,
+        GL.GL_DEPTH_COMPONENT:  2}
 
 class TextureStream2D(object):
     ''' A class that defines a 2D texture stream. A
@@ -157,9 +157,12 @@ class TextureStream2D(object):
 
         if not GL_TYPES.has_key(self.__gl_type):
             raise ValueError(repr(self.__gl_type) + ' is not a valid type.')
+        
+        if not GL_FORMATS.has_key(self.__gl_format):
+            raise ValueError(repr(self.__gl_format) + ' is not a valid format.')
 
         # Set up variables
-        self.__data_silhouette = None
+        self.__texture_silhouette = None
         self.__copy_sync = [GLSyncObject()] * self.__n_pixel_buffers
         self.__read_idx = 0
         self.__write_idx = 0
@@ -198,7 +201,14 @@ class TextureStream2D(object):
         # We're done with those textures
         GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
         
-        buffer_size = self.__size[0]*self.__size[1]*GL_TYPES[self.__gl_type]
+        # get the bytes per texel from GL_TYPES and GL_FORMATS
+        if GL_TYPES[self.__gl_type][1]:
+            bytes_per_texel = \
+                    GL_TYPES[self.__gl_type][0] * GL_FORMATS[self.__gl_format]
+        else:
+            bytes_per_texel = GL_TYPES[self.__gl_type][0]
+
+        buffer_size = self.__size[0]*self.__size[1]*bytes_per_texel
 
         # Set up the pixel buffers
         self.__pixel_buffers = GL.glGenBuffers(self.__n_pixel_buffers)
@@ -218,7 +228,7 @@ class TextureStream2D(object):
         # texel).
         for n in range(0,self.__n_pixel_buffers):
             self.update_texture_with_clear(\
-                    numpy.zeros((1,1,GL_TYPES[self.__gl_type]), dtype='uint8'))
+                    numpy.zeros((1,1,bytes_per_texel), dtype='uint8'))
         
         init_sync = GLSyncObject()
         
@@ -315,8 +325,8 @@ class TextureStream2D(object):
         
         self.__update_texture(data)
 
-        if data.shape[0:1] > self.__data_silhouette:
-            self.__data_silhouette = data.shape[0:1]
+        if data.shape[0:1] > self.__texture_silhouette:
+            self.__texture_silhouette = data.shape[0:1]
 
     def __set_next_write_idx(self):
         ''' Set the next write index for updating
@@ -353,21 +363,26 @@ class TextureStream2D(object):
         # A bit of data checking...
         _data = numpy.atleast_3d(data)
         
-        print _data.shape[2], GL_TYPES[self.__gl_type]
-        if not data.itemsize*_data.shape[2] == \
-                GL_TYPES[self.__gl_type]:
+        
+        
+        # get the bytes per texel from GL_TYPES and GL_FORMATS
+        if GL_TYPES[self.__gl_type][1]:
+            bytes_per_texel = \
+                    GL_TYPES[self.__gl_type][0] * GL_FORMATS[self.__gl_format]
+        else:
+            bytes_per_texel = GL_TYPES[self.__gl_type][0]
+        
+        if not data.itemsize*_data.shape[2] == bytes_per_texel:
             raise ValueError('The number of bytes per texel for the '\
                     'passed data does not agree with that expected by '\
-                    'the previously given GL type: ' + repr(self.__gl_type))
-        
-        # get the bytes per texel from GL_TYPES
-        bytes_per_data_point = GL_TYPES[self.__gl_type]
+                    'the previously given GL type and format: ' \
+                    + repr(self.__gl_type) + ', ' + repr(self.__gl_format))
 
         # Compute the buffer size from the defaults
-        buffer_size = self.__size[0]*self.__size[1]*bytes_per_data_point
+        buffer_size = self.__size[0]*self.__size[1]*bytes_per_texel
         
         data_size_to_copy = data.shape[0]\
-                * data.shape[1] * bytes_per_data_point
+                * data.shape[1] * bytes_per_texel
         
         if data_size_to_copy > buffer_size:
             raise ValueError('The data array is larger than the texture.')
@@ -448,15 +463,19 @@ class TextureStream2D(object):
         GL.glBindTexture(GL.GL_TEXTURE_2D, 
                 self.__textures[self.__write_idx])
         
-        # get the bytes per texel from GL_TYPES
-        bytes_per_data_point = GL_TYPES[self.__gl_type]
-
+        # get the bytes per texel from GL_TYPES and GL_FORMATS
+        if GL_TYPES[self.__gl_type][1]:
+            bytes_per_texel = \
+                    GL_TYPES[self.__gl_type][0] * GL_FORMATS[self.__gl_format]
+        else:
+            bytes_per_texel = GL_TYPES[self.__gl_type][0]
+        
         # Compute the buffer size from the defaults
-        buffer_size = self.__size[0]*self.__size[1]*bytes_per_data_point
+        buffer_size = self.__size[0]*self.__size[1]*bytes_per_texel
         
         # Clear the texture if the new data is smaller than
         # the old data in either dimension.
-        if data.shape[0:1] < self.__data_silhouette:
+        if data.shape[0:1] < self.__texture_silhouette:
             zero_texture = numpy.zeros(buffer_size, dtype='uint8')
             
             GL.glBindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, 
@@ -465,7 +484,7 @@ class TextureStream2D(object):
             GL.glBufferData(GL.GL_PIXEL_UNPACK_BUFFER, buffer_size, 
                         zero_texture, self.__buffer_usage)
 
-            self.__data_silhouette = data.shape[0:1]
+            self.__texture_silhouette = data.shape[0:1]
        
         self.__update_texture(data)
         

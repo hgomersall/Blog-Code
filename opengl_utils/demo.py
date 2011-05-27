@@ -22,8 +22,9 @@ frag_shader_code = '''
 uniform sampler2D image;
 
 void main(void)
-{
-    gl_FragColor = texture2D(image, gl_TexCoord[0].st);
+{   
+    const vec2 offset = vec2 (0.5, 0.5);
+    gl_FragColor = texture2D(image, gl_TexCoord[0].st + offset);
 }
 '''
 
@@ -56,6 +57,7 @@ class GLWidget(QGLWidget):
         self.program.link()
         
         self.texture_location = self.program.uniformLocation('image')
+        self.offset = self.program.uniformLocation('image')
 
         # Set up the texture stream
         # Arguments are (size, gl_format, gl_type, gl_internal_format)
@@ -92,7 +94,7 @@ class GLWidget(QGLWidget):
         
         with self.texture_stream:
                 
-            # Set the texture unit to be 0
+            # Tell the shader to use texture unit 0
             self.program.setUniformValue(self.texture_location, 0)
 
             # Draw the quad that is shaded with the image
@@ -122,6 +124,10 @@ class Window(QtGui.QWidget):
         self.setLayout(main_layout)
 
         self.setWindowTitle("Texture Streams...")
+
+    def mouseMoveEvent(self, event):
+        self.gl_widget.switch_image()
+        self.gl_widget.updateGL()
 
 def main(argv):
     app = QtGui.QApplication(argv)
