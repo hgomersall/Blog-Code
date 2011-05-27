@@ -1,0 +1,55 @@
+A couple of pythonic OpenGL utilities.
+
+Currently its just TextureStream2D and a wrapper around the GL synchronisation
+fence.
+
+The demo app, demo.py shows how the TextureStream2D object can be used.
+It flicks between 2 images when the mouse is clicked and moved over the 
+window. It depends on PySide (the Nokia python Qt bindings) as well as OpenGL.
+
+TextureStream2D is:
+
+''' A class that defines a 2D texture stream. A
+    texture stream in this context is an object through
+    which a texture that is used in rendering is
+    updated repeatedly. The intention of this class
+    is to provide a simple way in which users can
+    make use of pixel buffer objects to stream
+    textures asynchronously without having to
+    worry about synchronising the uploads with
+    the rendering. It makes use of multiple
+    buffers (2 by default) so any rendering code
+    has something to work with whilst an upload
+    is going on.
+
+    The idea is that the most recent texture upload is
+    bound when instance.bind_texture() is called.
+
+    Textures are uploaded using update_texture() or
+    update_texture_with_clear(). The latter clearing
+    the texture before upload if the data is not
+    going to overwrite the non-blank sections of 
+    the texture because it isn't big enough.
+
+    If an attempt is made to upload a texture whilst
+    non of the previous uploads have finished and
+    there are no more remaining buffers that are 
+    currently unused (either for upload or for
+    reading) then the data will just be ignored.
+
+    The class can be used as a texture context manager.
+    In this case, the textures are uploaded as 
+    described, but they are used within the 
+    context manager which takes care of binding
+    the correct texture. For example:
+
+    with texture_stream_2d_instance:
+        the rendering code
+        goes
+        here
+        :
+
+    '''
+
+More info on TextureStream2D as well as the synchronisation wrapper can be
+found in the inline documentation.
