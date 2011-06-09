@@ -40,7 +40,7 @@ class GLWidget(QGLWidget):
         super(GLWidget, self).__init__(*args)
         
         self.load_images()
-        self.texture_stream = None
+        self.texture_streamnks = None
         self.cur_image = 0
 
     def initializeGL(self):
