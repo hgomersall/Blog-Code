@@ -1,19 +1,17 @@
 #!/usr/bin/env python
 
-import sys, math
-import numpy
+import sys
 import PySide
 from PySide import QtCore, QtOpenGL, QtGui
 from PySide.QtCore import QUrl
 from PySide.QtGui import QGraphicsScene, QGraphicsView, QApplication
 from PySide.QtDeclarative import QDeclarativeView
-from PySide.QtOpenGL import QGLShader, QGLShaderProgram
 
 try:
     from OpenGL import GL
 except ImportError:
     app = QtGui.QApplication(sys.argv)
-    QtGui.QMessageBox.critical(None, "OpenGL hellogl",
+    QtGui.QMessageBox.critical(None, "Drawer test",
                             "PyOpenGL must be installed to run this example.",
                             QtGui.QMessageBox.Ok | QtGui.QMessageBox.Default,
                             QtGui.QMessageBox.NoButton)
