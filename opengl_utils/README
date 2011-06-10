@@ -53,3 +53,8 @@ TextureStream2D is:
 
 More info on TextureStream2D as well as the synchronisation wrapper can be
 found in the inline documentation.
+
+The sync stuff in PyOpenGL 3.0.1 has a bug that breaks this code. It can be
+fixed by applying OpenGL-3.0.1.patch in /usr/share/pyshared. This should be
+fixed in later versions.
+
