@@ -1,0 +1,14 @@
+=== modified file 'OpenGL/constants.py'
+--- OpenGL/constants.py 2011-04-12 19:23:44 +0000
++++ OpenGL/constants.py 2011-05-24 02:47:52 +0000
+@@ -103,7 +103,9 @@
+ # GL.ARB.sync extension, GLsync is an opaque pointer to a struct
+ # in the extensions header, basically just a "token" that can be
+ # passed to the various operations...
+-GLsync = ctypes.c_void_p
++class _GLsync( ctypes.Structure ):
++    """Opaque structure definition to fool ctypes into treating us as a real structure"""
++GLsync = ctypes.POINTER( _GLsync ) # ctypes.c_void_p does *not* work as a return type...
+ GLvoidp = ctypes.c_void_p
+ 
+ ARRAY_TYPE_TO_CONSTANT = [

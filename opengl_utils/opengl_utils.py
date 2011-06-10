@@ -57,7 +57,6 @@ GL_TYPES = {GL.GL_UNSIGNED_BYTE:           (1, True),
         GL.GL_UNSIGNED_INT_2_10_10_10_REV: (4, False)}
 
 
-# The number of components per texel
 GL_FORMATS = {\
         GL.GL_COLOR_INDEX:      1,
         GL.GL_RED:              1,       
@@ -70,7 +69,7 @@ GL_FORMATS = {\
         GL.GL_BGRA:             4,
         GL.GL_LUMINANCE:        1,
         GL.GL_LUMINANCE_ALPHA:  2,
-        GL.GL_DEPTH_COMPONENT:  1}
+        GL.GL_DEPTH_COMPONENT:  2}
 
 class TextureStream2D(object):
     ''' A class that defines a 2D texture stream. A
@@ -531,6 +530,11 @@ class GLSyncObject(object):
 
         See the documentation for glClientWaitSync for 
         more information on these return values.
+
+        The sync stuff in PyOpenGL 3.0.1 has a bug
+        that breaks this code. It can be fixed by applying
+        OpenGL-3.0.1.patch in /usr/share/pyshared. This
+        should be fixed in later versions.
         '''
         ns_timeout = int(timeout*1000000000)
         status = GL_sync.glClientWaitSync(self.__sync,
