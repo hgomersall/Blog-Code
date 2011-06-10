@@ -1,0 +1,8 @@
+Code tested with:
+Python 2.7
+PyOpenGL 3.0.1
+PySide 1.0.1
+Qt 4.7.2
+
+Blog post:
+http://hgomersall.wordpress.com/2011/06/09/almost-pretty-drawers-with-qml/

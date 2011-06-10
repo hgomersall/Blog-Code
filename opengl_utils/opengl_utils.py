@@ -533,6 +533,7 @@ class GLSyncObject(object):
         more information on these return values.
         '''
         ns_timeout = int(timeout*1000000000)
+        print self.__sync
         status = GL_sync.glClientWaitSync(self.__sync,
                 GL_sync.GL_SYNC_FLUSH_COMMANDS_BIT, ns_timeout)
         
