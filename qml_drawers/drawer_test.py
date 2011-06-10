@@ -25,6 +25,7 @@ class GraphicsView(QGraphicsView):
         super(GraphicsView, self).__init__(*args)
 
         self.setWindowTitle('QML on OpenGL Test Program')
+        self.setStyleSheet('QGraphicsView { border-style: none; }')
         return
 
     def resizeEvent(self, event):
@@ -49,15 +50,18 @@ class OverlayWidget(QtGui.QWidget):
         palette = QtGui.QPalette()
         palette.setColor(QtGui.QPalette.Base, QtCore.Qt.transparent)
 
+        self.setPalette(palette)
+        
+        
         self.qml_view = QDeclarativeView(self)
+        self.qml_view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
         self.qml_view.setPalette(palette)
         self.qml_view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
-        
+
         url = QUrl('drawer_demo.qml')
         self.qml_view.setSource(url)
-
+    
     def resizeEvent(self, event):
-        print event.size()
         self.qml_view.resize(event.size())
 
 class OpenGLScene(QGraphicsScene):
@@ -82,7 +86,9 @@ class OpenGLScene(QGraphicsScene):
         GL.glPushMatrix()
         GL.glMatrixMode(GL.GL_MODELVIEW)
         GL.glPushMatrix()
-        
+
+        GL.glClearColor(1.0,1.0,1.0,1.0)
+        GL.glClear(GL.GL_COLOR_BUFFER_BIT)
         # OpenGL stuff goes here...
         
         GL.glMatrixMode(GL.GL_MODELVIEW)
@@ -103,6 +109,7 @@ class DisplayWidget(QtGui.QWidget):
         # the QGLWidget.
         gl_format = QtOpenGL.QGLFormat()
         gl_format.setSampleBuffers(True)
+        gl_format.setDepth(False)
 
         self.gl_widget = QtOpenGL.QGLWidget(gl_format)
 

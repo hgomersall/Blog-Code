@@ -5,7 +5,7 @@ Item {
     height: 480
 
     Rectangle {
-        anchors.right: parent.right
+        anchors.left: parent.left
         anchors.top: parent.top
         color: "orange"
         width: 300
@@ -18,6 +18,8 @@ Item {
     }
 
     DrawerChest {
-        anchors.fill: parent 
+        anchors.fill: parent
+        anchors.leftMargin: 0 //parent.width/6
+        anchors.rightMargin: 0 //parent.width/6
     }
 }
