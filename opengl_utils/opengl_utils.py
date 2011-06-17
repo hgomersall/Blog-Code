@@ -150,6 +150,7 @@ class TextureStream2D(object):
         self.__gl_type = gl_type
         self.__gl_internal_format = gl_internal_format
         self.__buffer_usage = buffer_usage
+        self.__texture_valid = False
         
         # The number of pixel buffers that are used for
         # streaming the textures.
@@ -230,12 +231,20 @@ class TextureStream2D(object):
             self.update_texture_with_clear(\
                     numpy.zeros((1,1,bytes_per_texel), dtype='uint8'))
         
+        # Delete the syncs just created by the init.
+        for n in range(0,self.__n_pixel_buffers):
+            self.__copy_sync[n].delete_sync()
+
         init_sync = GLSyncObject()
         
         status = init_sync.block_until_signalled(timeout=2.0)
         if status is GLSyncObject.GL_TIMEOUT_EXPIRED:
             raise RuntimeError('Problem initialising the textures in a '\
                     'reasonable time frame.')
+        
+        # Reinitialise the indices
+        self.__read_idx = 0
+        self.__write_idx = 0
 
     def __enter__(self):
         self.bind_texture()
@@ -243,20 +252,33 @@ class TextureStream2D(object):
     def __exit__(self, *args):
         GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
         return False
-    
+        
     def __update_read_idx(self):
         '''Update the read index to the most 
-        recently filled buffer.
+        recently filled buffer. Return True
+        if the read index is changed, otherwise
+        return False.
         '''
         # Count backwards from the write index
         # until we get to a buffer that has signalled
         # completion. If none is found, the read index
-        # remains unchanged.
+        # remains unchanged and return False (else
         for n in range(0,self.__n_pixel_buffers):
             idx = (self.__write_idx-n)%self.__n_pixel_buffers
-            if self.__copy_sync[idx].get_fence_signalled():
+            if self.__copy_sync[idx].get_fence_signalled_and_delete():
                 self.__read_idx = idx
-                break
+                return True
+
+        return False
+    
+    def get_texture_validity(self):
+        '''Return whether a texture has ever
+        completed an upload. Useful at initialisation.
+        '''
+        if not self.__texture_valid:
+            self.__texture_valid = self.__update_read_idx()
+        
+        return self.__texture_valid
 
     def bind_texture(self):
         ''' Bind the current texture to the OpenGL context 
@@ -328,11 +350,13 @@ class TextureStream2D(object):
         if data.shape[0:1] > self.__texture_silhouette:
             self.__texture_silhouette = data.shape[0:1]
 
+        GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
+
     def __set_next_write_idx(self):
         ''' Set the next write index for updating
         the texture.
 
-        Return True if the write buffer was update
+        Return True if the write index was updated
         ok, otherwise False. False is returned
         if the next buffer is the one currently
         being read from.
@@ -350,7 +374,7 @@ class TextureStream2D(object):
             if self.__write_idx == self.__read_idx:
                 self.__write_idx = (self.__write_idx-1)%self.__n_pixel_buffers
                 return False
-
+        
         return True
         
 
@@ -362,8 +386,6 @@ class TextureStream2D(object):
         '''
         # A bit of data checking...
         _data = numpy.atleast_3d(data)
-        
-        
         
         # get the bytes per texel from GL_TYPES and GL_FORMATS
         if GL_TYPES[self.__gl_type][1]:
@@ -409,7 +431,7 @@ class TextureStream2D(object):
         # Unmap the buffer. This then pushes the memory
         # block to the graphics card with a DMA transfer??
         GL.glUnmapBuffer(GL.GL_PIXEL_UNPACK_BUFFER) 
-        
+
         # Copy the image to the texture memory. Since
         # we have a buffer object, this copies it out
         # of that memory.
@@ -420,6 +442,9 @@ class TextureStream2D(object):
             self.__gl_format,
             self.__gl_type,
             None)
+        
+        # Remove the buffer binding
+        GL.glBindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, 0)
         
         self.__copy_sync[self.__write_idx] = GLSyncObject()
 
@@ -485,9 +510,14 @@ class TextureStream2D(object):
                         zero_texture, self.__buffer_usage)
 
             self.__texture_silhouette = data.shape[0:1]
-       
+            
+            # Unbind the buffer
+            GL.glBindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, 0)
+        
         self.__update_texture(data)
         
+        # Unbind the texture
+        GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
 
 class GLSyncObject(object):
     ''' A pythonic wrapper around the GL fence sync
@@ -513,11 +543,17 @@ class GLSyncObject(object):
                 GL_sync.glFenceSync(GL_sync.GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
 
     def __del__(self):
-        GL_sync.glDeleteSync(self.__sync)
-    
+        self.delete_sync()
+
+    def delete_sync(self):
+        if self.__sync is not None:
+            GL_sync.glDeleteSync(self.__sync)
+            self.__sync = None
+
     def block_until_signalled(self, timeout=1.0):
         ''' Blocks until the fence has been signalled
-        with the timeout given by timeout (in seconds). 
+        with the timeout given by timeout (in seconds).
+        Always delete the sync object before returning.
         
         This uses the built in glClientWaitSync method
         and passes back the return value. The return
@@ -536,20 +572,43 @@ class GLSyncObject(object):
         OpenGL-3.0.1.patch in /usr/share/pyshared. This
         should be fixed in later versions.
         '''
-        ns_timeout = int(timeout*1000000000)
-        print self.__sync
-        status = GL_sync.glClientWaitSync(self.__sync,
-                GL_sync.GL_SYNC_FLUSH_COMMANDS_BIT, ns_timeout)
         
-        return self.TIMEOUT_STATUS[status]
+        if self.__sync is not None:
+            ns_timeout = int(timeout*1000000000)
+            status = GL_sync.glClientWaitSync(self.__sync,
+                    GL_sync.GL_SYNC_FLUSH_COMMANDS_BIT, ns_timeout)
+            
+            self.delete_sync()
+            return self.TIMEOUT_STATUS[status]
+        
+        else:
+            self.delete_sync()
+            return False
 
     def get_fence_signalled(self):
         ''' Returns a boolean describing whether 
         the fence has been signalled.
         '''
-        fence_status = GL.GLint(0)
-        GL_sync.glGetSynciv(self.__sync,
-                GL_sync.GL_SYNC_STATUS,
-                GL.GLint(1), GL.GLint(0), fence_status)
+        if self.__sync is not None:
+            fence_status = GL.GLint(0)
+            GL_sync.glGetSynciv(self.__sync,
+                    GL_sync.GL_SYNC_STATUS,
+                    GL.GLint(1), GL.GLint(0), fence_status)
+            
+            return (GL_sync.GL_SIGNALED == fence_status.value)
+
+        else:
+            return False
+
+    def get_fence_signalled_and_delete(self):
+        ''' Returns whether the fence has been signalled.
+        and then deletes it if True. Subsequent tests on the
+        fence will always fail.
+        '''
+        signalled = self.get_fence_signalled()
         
-        return (GL_sync.GL_SIGNALED == fence_status.value)
+        if signalled:
+            self.delete_sync()
+        
+        return signalled
+

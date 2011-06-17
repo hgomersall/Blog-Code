@@ -26,27 +26,38 @@ Item {
     //width: parent.width
     //height: parent.height
     anchors.fill: parent
-    z: 15
-
+    
+    // Properties to change commonly
     property string title
     property int idx: 0
     property int colorIndex: 0
     property real openHeight: 400
     property real tabHeight: 30
     property int numberOfDrawers: 1
-    property real closedRight: Math.floor(width/numberOfDrawers*(idx + 1))
-    property real closedLeft: Math.floor(width/numberOfDrawers*idx)
-    property real closingOpacity: 0.3
 
+    // Child opacities
     property real tabOpacity: 0.8
     property real textOpacity: 1.0
     property real bgOpacity: 0.75
 
-    property real leftOffset: 0
-    property real currentHeight: openHeight
-    property real currentWidth: width
+    property real closedRight: Math.floor(width/numberOfDrawers*(idx + 1))
+    property real closedLeft: Math.floor(width/numberOfDrawers*idx)
+    
+    property real closedZValue: 10
+    property real openZValue: -10
+    
+    // Transition properties
+    // put the closing drawer to be between the closed tabs and the open
+    // drawers
+    property real closingZValue: (closedZValue + openZValue)/2
+    property real openingZValue: openZValue
+    property real closingOpacity: 0.3
 
-    property real parentWidth: parent.width
+    // Dynamic properties that change with state
+    property real leftOffset: 0
+    property real currentHeight: drawer.tabHeight
+    property real currentWidth: width
+    opacity: 1.0
 
     signal drawerOpened(int idx)
     signal drawerClosed(int idx)
@@ -55,10 +66,24 @@ Item {
     state: "closed"
 
     Behavior on closedRight {
-        NumberAnimation { duration: 1000; easing.type: Easing.OutElastic}
+        id: closed_right_behavior
+        enabled: false
+        NumberAnimation {
+            duration: 1000
+            easing.type: Easing.OutElastic
+        }
     }
     Behavior on closedLeft {
-        NumberAnimation { duration: 1000; easing.type: Easing.OutElastic }
+        id: closed_left_behavior
+        enabled: false
+        NumberAnimation {
+            duration: 1000
+            easing.type: Easing.OutElastic
+        }
+    }
+    
+    function addDrawerElement(component){
+        console.log(delegate)
     }
 
     function aDrawerOpened(drawer_idx){
@@ -88,14 +113,9 @@ Item {
         colorIndex = color_index
     }
 
-    Component.onCompleted: {
-        if (state == "closed") {
-            openDrawer()
-            closeDrawer()
-        } else {
-            closeDrawer()
-            openDrawer()
-        }
+    function enableDrawMoveAnimation(){
+        closed_right_behavior.enabled = true
+        closed_left_behavior.enabled = true
     }
 
     Rectangle {
@@ -186,7 +206,7 @@ Item {
                 currentHeight: drawer.openHeight
                 currentWidth: drawer.width
                 leftOffset: 0
-                z: -10
+                z: drawer.openZValue
             }
         },
         State {
@@ -198,53 +218,44 @@ Item {
 
                 }
             }
-            StateChangeScript {
-                name: "begin_close"
-                script: {
-                    drawer.opacity = drawer.closingOpacity
-                }
-            }
-            StateChangeScript {
-                name: "end_close"
-                script: {
-                    // This is a bit mucky - the final z value
-                    // is 15, but starts out as the value given 
-                    // by the property change below. I couldn't work
-                    // out a way to make the property change during 
-                    // transition but ending on something else.
-                    drawer.opacity = 1.0
-                    drawer.z = 15
-                }
-            }
             PropertyChanges {
                 target: drawer
                 currentHeight: drawer.tabHeight
                 currentWidth: drawer.closedRight-drawer.closedLeft
                 leftOffset: drawer.closedLeft
-                z: 10
             }
         }
     ]
 
     transitions: [
         Transition {
+            id: to_open_transition
             to: "open"
             SequentialAnimation{
+                PropertyAction {target: drawer; property: "z"; value: drawer.openingZValue}
                 PropertyAnimation {
+                    id: open_animation
                     properties: "currentHeight,currentWidth,leftOffset"
                     easing.type: Easing.InOutQuad
                 }
+                PropertyAction {target: drawer; property: "z"; value: drawer.openZValue}
             }
         },
+
         Transition {
+            id: to_close_transition
             to: "closed"
             SequentialAnimation{
-                ScriptAction { scriptName: "begin_close" }
+                // Move the closing drawer behind the other closed drawers
+                PropertyAction {target: drawer; property: "z"; value: drawer.closingZValue}
+                PropertyAction {target: containing_rect; property: "opacity"; value: drawer.closingOpacity}
                 PropertyAnimation {
+                    id: close_animation
                     properties: "currentHeight,currentWidth,leftOffset"
                     easing.type: Easing.InOutQuad
                 }
-                ScriptAction { scriptName: "end_close" }
+                PropertyAction {target: drawer; property: "z"; value: drawer.closedZValue}
+                PropertyAction {target: containing_rect; property: "opacity"; value: 1.0}
             }
         }
     ]

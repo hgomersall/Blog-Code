@@ -29,7 +29,7 @@ Item {
     
     anchors.fill: parent
     
-    signal newDrawerOpened(int idx)
+    signal aDrawerOpened(int idx)
     signal drawerRemoved(int idx)
 
     Component {
@@ -59,8 +59,19 @@ Item {
         new_drawer.drawerOpened.connect(drawerOpened)
         new_drawer.drawerClosed.connect(drawerClosed)
 
-        newDrawerOpened.connect(new_drawer.aDrawerOpened)
+        aDrawerOpened.connect(new_drawer.aDrawerOpened)
         drawerRemoved.connect(new_drawer.reindex)
+        
+        // Since we initialised the component before
+        // connecting the signals, we see what the state
+        // is and emit the relevant signal manually.
+        if (new_drawer.state == "closed"){
+            new_drawer.drawerClosed(new_drawer.idx)
+        } else if (new_drawer.state == "open"){
+            new_drawer.drawerOpened(new_drawer.idx)
+        }
+
+        new_drawer.enableDrawMoveAnimation()
 
         Code.drawer_array.push(new_drawer)
     }
@@ -71,7 +82,7 @@ Item {
             var rem_drawer = Code.drawer_array[index]
             
             // Disconnect the signals
-            drawer_chest.newDrawerOpened.disconnect(rem_drawer.aDrawerOpened)
+            drawer_chest.aDrawerOpened.disconnect(rem_drawer.aDrawerOpened)
             drawer_chest.drawerRemoved.disconnect(rem_drawer.reindex)
             
             // Delete the drawer
@@ -86,7 +97,7 @@ Item {
     }
 
     function drawerOpened(opened_drawer_idx){
-        newDrawerOpened(opened_drawer_idx)
+        aDrawerOpened(opened_drawer_idx)
     }
 
     function drawerClosed(closed_drawer){
