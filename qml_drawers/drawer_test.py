@@ -56,7 +56,6 @@ class OverlayWidget(QtGui.QWidget):
         self.qml_view = QDeclarativeView(self)
         self.qml_view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
         self.qml_view.setPalette(palette)
-        self.qml_view.setResizeMode(QDeclarativeView.SizeRootObjectToView)
 
         url = QUrl('drawer_demo.qml')
         self.qml_view.setSource(url)
@@ -115,11 +114,13 @@ class DisplayWidget(QtGui.QWidget):
 
         # Set up the view
         self.view = GraphicsView()
+        self.view.setParent(self)        
         self.view.setViewport(self.gl_widget)
         self.view.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         
         # Set up the scene
         self.scene = OpenGLScene()
+        self.scene.setParent(self)
         
         self.overlay_widget = OverlayWidget()     
         self.scene.addWidget(self.overlay_widget)
@@ -129,10 +130,6 @@ class DisplayWidget(QtGui.QWidget):
         # Assign in the scene to the view.
         self.view.setScene(self.scene)
 
-        # Set the scene and view to be a child of this class
-        self.view.setParent(self)
-        self.scene.setParent(self)
-    
     def resizeEvent(self, event):
         ''' Called when the widget is resized
         '''
