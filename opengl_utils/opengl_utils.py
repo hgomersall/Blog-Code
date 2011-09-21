@@ -115,7 +115,9 @@ class TextureStream2D(object):
     '''
     
     def __init__(self, size, gl_format, gl_type, gl_internal_format,
-            buffers=2, buffer_usage=GL.GL_STREAM_DRAW):
+            texture_unit, buffers=2, 
+            buffer_usage=GL.GL_STREAM_DRAW,
+            min_filter=GL.GL_NEAREST, mag_filter=GL.GL_NEAREST):
         ''' Initialise the texture stream.
 
         size is a tuple or similarly indexable array with
@@ -129,6 +131,13 @@ class TextureStream2D(object):
         (under the subheadings given by format, type
         and internalformat respectively), and the 
         arguments should satisfy those descriptions.
+        
+        texture_unit is the OpenGL texture unit that
+        should be used for all the texture operations
+        related to this texture stream. It should be
+        one of GL.GL_TEXTUREi. See 
+        http://www.opengl.org/sdk/docs/man/xhtml/glActiveTexture.xml
+        for more info about the texture units.
 
         The argument buffers is the number of pixel
         buffer objects, and by extension the number
@@ -155,6 +164,8 @@ class TextureStream2D(object):
         # The number of pixel buffers that are used for
         # streaming the textures.
         self.__n_pixel_buffers = buffers
+        
+        self.__texture_unit = texture_unit
 
         if not GL_TYPES.has_key(self.__gl_type):
             raise ValueError(repr(self.__gl_type) + ' is not a valid type.')
@@ -164,17 +175,22 @@ class TextureStream2D(object):
 
         # Set up variables
         self.__texture_silhouette = None
-        self.__copy_sync = [GLSyncObject()] * self.__n_pixel_buffers
+        try:
+            self.__copy_sync = [GLSyncObject()] * self.__n_pixel_buffers
+        except GLExtensionNotAvailable:
+            self.__copy_sync = [GLDummySyncObject()] * self.__n_pixel_buffers
+
         self.__read_idx = 0
         self.__write_idx = 0
         
         for each_sync in self.__copy_sync:
             status = each_sync.block_until_signalled()
-            if status is GLSyncObject.GL_TIMEOUT_EXPIRED:
+            if status is type(each_sync).GL_TIMEOUT_EXPIRED:
                 raise RuntimeError('Problem clearing the OpenGL pipeline in a '\
                     'reasonable time frame.')
 
         # Initialise the textures
+        GL.glActiveTexture(self.__texture_unit)
         self.__textures = GL.glGenTextures(self.__n_pixel_buffers)
         if self.__n_pixel_buffers == 1:
             self.__textures = [self.__textures]
@@ -191,9 +207,9 @@ class TextureStream2D(object):
             # Nearest neighbour filters, clamping texture coordinates to 
             # between 0 and 1.
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
-                    GL.GL_TEXTURE_MAG_FILTER, GL.GL_NEAREST)
+                    GL.GL_TEXTURE_MAG_FILTER, mag_filter)
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
-                    GL.GL_TEXTURE_MIN_FILTER, GL.GL_NEAREST)
+                    GL.GL_TEXTURE_MIN_FILTER, min_filter)
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
                     GL.GL_TEXTURE_WRAP_S, GL.GL_CLAMP)
             GL.glTexParameterf(GL.GL_TEXTURE_2D, \
@@ -234,11 +250,14 @@ class TextureStream2D(object):
         # Delete the syncs just created by the init.
         for n in range(0,self.__n_pixel_buffers):
             self.__copy_sync[n].delete_sync()
-
-        init_sync = GLSyncObject()
         
+        try:
+            init_sync = GLSyncObject()
+        except GLExtensionNotAvailable:
+            self.init_sync = GLDummySyncObject()
+
         status = init_sync.block_until_signalled(timeout=2.0)
-        if status is GLSyncObject.GL_TIMEOUT_EXPIRED:
+        if status is type(init_sync).GL_TIMEOUT_EXPIRED:
             raise RuntimeError('Problem initialising the textures in a '\
                     'reasonable time frame.')
         
@@ -250,7 +269,7 @@ class TextureStream2D(object):
         self.bind_texture()
 
     def __exit__(self, *args):
-        GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
+        self.unbind_texture()
         return False
         
     def __update_read_idx(self):
@@ -296,7 +315,8 @@ class TextureStream2D(object):
             goes
             here
         '''
-        
+        GL.glActiveTexture(self.__texture_unit)
+
         if self.__n_pixel_buffers is 1:
             texture_id = self.__textures[0]
         else:
@@ -304,7 +324,11 @@ class TextureStream2D(object):
             texture_id = self.__textures[self.__read_idx]
 
         GL.glBindTexture(GL.GL_TEXTURE_2D, texture_id)
-    
+        
+    def unbind_texture(self):
+        GL.glActiveTexture(self.__texture_unit)
+        GL.glBindTexture(GL.GL_TEXTURE_2D, 0)        
+
     def update_texture(self, data):
         '''Update the texture with a passed data array.
 
@@ -341,15 +365,18 @@ class TextureStream2D(object):
         '''
         if not self.__set_next_write_idx():
             return None
+        
+        GL.glActiveTexture(self.__texture_unit)
 
         GL.glBindTexture(GL.GL_TEXTURE_2D, 
                 self.__textures[self.__write_idx])
         
         self.__update_texture(data)
 
-        if data.shape[0:1] > self.__texture_silhouette:
-            self.__texture_silhouette = data.shape[0:1]
-
+        if data.shape[0:2] > self.__texture_silhouette:
+            self.__texture_silhouette = data.shape[0:2]
+        
+        print self.__texture_silhouette
         GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
 
     def __set_next_write_idx(self):
@@ -384,6 +411,10 @@ class TextureStream2D(object):
         been set up and the correct texture
         has been bound.
         '''
+        #
+        # The active texture unit should already have been set
+        #
+
         # A bit of data checking...
         _data = numpy.atleast_3d(data)
         
@@ -417,16 +448,9 @@ class TextureStream2D(object):
                     None, self.__buffer_usage)
         
         # Map the buffer object to a pointer
-        pbo_pointer = ctypes.cast(\
-                GL.glMapBuffer(GL.GL_PIXEL_UNPACK_BUFFER, GL.GL_WRITE_ONLY),
-                ctypes.POINTER(ctypes.c_ubyte))
-        
-        # Turn that pointer into a numpy array that spans
-        # the whole block.
-        pbo_array = numpy.ctypeslib.as_array(pbo_pointer, (buffer_size,))
-        
-        pbo_array[0:data_size_to_copy] = \
-                data.view(dtype='uint8').ravel()
+        pbo_pointer = GL.glMapBuffer(GL.GL_PIXEL_UNPACK_BUFFER, GL.GL_WRITE_ONLY)
+
+        ctypes.memmove(pbo_pointer, data.ctypes.data, data_size_to_copy)
 
         # Unmap the buffer. This then pushes the memory
         # block to the graphics card with a DMA transfer??
@@ -445,8 +469,11 @@ class TextureStream2D(object):
         
         # Remove the buffer binding
         GL.glBindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, 0)
-        
-        self.__copy_sync[self.__write_idx] = GLSyncObject()
+
+        try:
+            self.__copy_sync[self.__write_idx] = GLSyncObject()
+        except GLExtensionNotAvailable:
+            self.__copy_sync[self.__write_idx] = GLDummySyncObject()
 
     def update_texture_with_clear(self, data):
         ''' Update the texture with a passed data array.
@@ -484,6 +511,8 @@ class TextureStream2D(object):
         '''
         if not self.__set_next_write_idx():
             return None
+
+        GL.glActiveTexture(self.__texture_unit)
         
         GL.glBindTexture(GL.GL_TEXTURE_2D, 
                 self.__textures[self.__write_idx])
@@ -500,7 +529,7 @@ class TextureStream2D(object):
         
         # Clear the texture if the new data is smaller than
         # the old data in either dimension.
-        if data.shape[0:1] < self.__texture_silhouette:
+        if data.shape[0:2] < self.__texture_silhouette:
             zero_texture = numpy.zeros(buffer_size, dtype='uint8')
             
             GL.glBindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, 
@@ -509,8 +538,7 @@ class TextureStream2D(object):
             GL.glBufferData(GL.GL_PIXEL_UNPACK_BUFFER, buffer_size, 
                         zero_texture, self.__buffer_usage)
 
-            self.__texture_silhouette = data.shape[0:1]
-            
+            self.__texture_silhouette = data.shape[0:2]
             # Unbind the buffer
             GL.glBindBuffer(GL.GL_PIXEL_UNPACK_BUFFER, 0)
         
@@ -518,6 +546,31 @@ class TextureStream2D(object):
         
         # Unbind the texture
         GL.glBindTexture(GL.GL_TEXTURE_2D, 0)
+
+class GLExtensionNotAvailable(Exception):
+    pass
+
+class GLDummySyncObject(object):
+    ''' A dummy sync object that always returns true
+    for the state of the fence sync.
+    '''
+    GL_ALREADY_SIGNALED = False
+    GL_TIMEOUT_EXPIRED = False
+    GL_CONDITION_SATISFIED = True
+    GL_WAIT_FAILED = False
+
+    def delete_sync(self):
+        pass
+
+    def block_until_signalled(self, timeout=1.0):
+        return self.GL_CONDITION_SATISFIED
+
+    def get_fence_signalled(self):
+        return True
+
+    def get_fence_signalled_and_delete(self):
+        return True
+
 
 class GLSyncObject(object):
     ''' A pythonic wrapper around the GL fence sync
@@ -538,7 +591,10 @@ class GLSyncObject(object):
             GL_sync.GL_WAIT_FAILED: GL_WAIT_FAILED}
 
     def __init__(self):
-
+        
+        if not GL_sync.glFenceSync:
+            raise GLExtensionNotAvailable 
+        
         self.__sync = \
                 GL_sync.glFenceSync(GL_sync.GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
 
