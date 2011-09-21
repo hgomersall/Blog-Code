@@ -61,9 +61,9 @@ class GLWidget(QGLWidget):
 
         # Set up the texture stream
         # Arguments are (size, gl_format, gl_type, gl_internal_format)
-        self.texture_stream = \
-                TextureStream2D((512,512), GL.GL_RGBA, 
-                        GL.GL_UNSIGNED_BYTE, GL.GL_RGBA)
+        self.texture_stream = TextureStream2D((512,512), GL.GL_RGBA, 
+                        GL.GL_UNSIGNED_BYTE, GL.GL_RGBA, 
+                        texture_unit=GL.GL_TEXTURE0)
         
         self.switch_image()
 
