@@ -16,6 +16,6 @@ def get_string_from_lib():
         print 'In the cython code:', py_string
     finally:
         print 'Trying to free the C string...'
-        #free(c_string)
+        free(c_string)
 
     return py_string
