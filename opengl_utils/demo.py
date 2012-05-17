@@ -89,7 +89,7 @@ class GLWidget(QGLWidget):
 
     def paintGL(self):
         GL.glClear(GL.GL_COLOR_BUFFER_BIT | GL.GL_DEPTH_BUFFER_BIT)
-        
+        print 'after'
         self.program.bind()
         
         with self.texture_stream:

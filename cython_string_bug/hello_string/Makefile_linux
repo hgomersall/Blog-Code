@@ -1,0 +1,15 @@
+
+all: hello_string
+
+hello_string: libhello_string.so
+	gcc -o string_test string_test.c -Wl,-R. -z origin -L. -lhello_string
+
+libhello_string.so: hello_string.o
+	gcc -o libhello_string.so hello_string.o -s -shared -Wl
+	cp libhello_string.so ../
+
+hello_string.o:
+	gcc -c -fPIC -o hello_string.o hello_string.c -D HELLO_EXPORTS
+
+clean:
+	rm -rf hello_string.o libhello_string.so hello_string.dll string_test string_test.exe
