@@ -17,5 +17,6 @@ def get_string_from_lib():
     finally:
         print 'Trying to free the C string...'
         free(c_string)
+        print 'Freed successfully'
 
     return py_string
