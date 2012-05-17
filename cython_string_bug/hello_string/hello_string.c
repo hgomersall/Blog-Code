@@ -4,7 +4,7 @@
 
 char* HELLOCALL hello_string()
 {
-    static char* return_string;
+    char* return_string;
 
     return_string = (char *)malloc(sizeof(char) * 30);
 
