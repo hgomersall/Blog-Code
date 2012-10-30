@@ -27,6 +27,16 @@
 
 #include "convolve.h"
 
+int convolve_naive_multiple(float* in, float* out, int length,
+        float* kernel, int kernel_length, int N)
+{
+    for(int i=0; i<N; i++){
+        convolve_naive(in, out, length, kernel, kernel_length);
+    }
+
+    return 0;
+}
+
 int convolve_naive(float* in, float* out, int length,
         float* kernel, int kernel_length)
 {

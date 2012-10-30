@@ -27,31 +27,62 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <glib.h>
+#include <sys/time.h>
 
 #include "convolve.h"
 #include "test_data.h"
 
 #define INPUT_LENGTH 1024
 #define KERNEL_LENGTH 16
+#define N_LOOPS 10000
+#define N_TESTS 10
 
 #define INPUT_ARRAY input_data_1024
 #define KERNEL kernel_16
 #define TEST_OUTPUT_CORRECT output_in1024_kernel16
+
+long time_delta(struct timeval* now, struct timeval* then)
+{
+    long delta = 0l;
+
+    delta += (now->tv_sec - then->tv_sec) * 1000000;
+    delta += (now->tv_usec - then->tv_usec);
+
+    return delta;
+}
 
 int main()
 {
     float* test_output = malloc(
             sizeof(float)*(INPUT_LENGTH-KERNEL_LENGTH+1));
 
-    convolve_naive(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
-            KERNEL_LENGTH);
+    struct timeval now, then;
+
+    long min_delta = -1;
+    long delta;
+    printf("Running %d tests of %d loops\n", N_TESTS, N_LOOPS);
+
+    for (int j=0; j<N_TESTS; j++){
+        gettimeofday(&then, NULL);
+
+        convolve_naive_multiple(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
+                    KERNEL_LENGTH, N_LOOPS);
+        gettimeofday(&now, NULL);
+        delta = time_delta(&now, &then)/N_LOOPS;
+
+        min_delta = ((min_delta == -1) || 
+                (delta < min_delta)) ? delta : min_delta;
+    }
+
+    printf("Lowest test time: %li microseconds per loop.\n", 
+            min_delta);
 
     for (int i=0; i<INPUT_LENGTH-KERNEL_LENGTH+1; i++)
         if (TEST_OUTPUT_CORRECT[i] != test_output[i]){
             g_error("Computed convolution is incorrect.");
         }
 
-    printf("Successful convolution test\n");    
+    printf("Convolution is valid.\n");    
 
     free(test_output);
 

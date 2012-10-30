@@ -28,6 +28,9 @@
 #ifndef _CONVOLVE_H
 #define _CONVOLVE_H
 
+int convolve_naive_multiple(float* in, float* out, int length,
+        float* kernel, int kernel_length, int N);
+
 int convolve_naive(float* in, float* out, int length,
         float* kernel, int kernel_length);
 

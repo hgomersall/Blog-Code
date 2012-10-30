@@ -13,9 +13,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Werror")
 
 # Magic to set GCC-specific compile flags (to turn on optimisation).
-#set(GCC_FLAGS "-std=c99 -Wall -O9 -g")
-#set(GCC_FLAGS "-std=c99 -Wall -O3 -g")
-set(GCC_FLAGS "-std=c99 -Wall -g")
+set(GCC_FLAGS "-std=c99 -Wall -O3 -g")
 
 if(CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${GCC_FLAGS}")
@@ -47,13 +45,15 @@ link_directories(${GLIB_LIBRARY_DIRS})
 set(CMAKE_CFLAGS "${CMAKE_CFLAGS} ${GLIB_CFLAGS}")
 set(CMAKE_CXXFLAGS "${CMAKE_CXXFLAGS} ${GLIB_CFLAGS}")
 
+add_library(convolve_funcs SHARED convolve.h convolve.c)
+
 set(_test_convolve_sources
-    convolve.h           convolve.c    
     test_data.h          test_data.c
     test_convolve.c
 )
 
 add_executable(test_convolve ${_test_convolve_sources})
 target_link_libraries(test_convolve
+    convolve_funcs
     ${GLIB_LIBRARIES})
 
