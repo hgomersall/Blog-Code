@@ -27,6 +27,7 @@
 
 #include "convolve.h"
 #include <string.h>
+#include <stdio.h>
 
 /* A set of convolution routines, all of which present the same interface
  * (albeit, with some of them having restrictions on the size and shape of 
@@ -38,6 +39,7 @@
  * All the convolve functions have the same signature and interface.
  *
  * */
+
 
 /* A simple implementation of a 1D convolution that just iterates over
  * scalar values of the input array. 
@@ -60,6 +62,7 @@ int convolve_naive(float* in, float* out, int length,
 
 
 #ifdef SSE3
+
 
 /* Vectorize the algorithm to compute 4 output samples in parallel.
  *
@@ -125,6 +128,7 @@ int convolve_sse_simple(float* in, float* out, int length,
     return 0;
 }
 
+
 /* As convolve_sse_simple plus...
  *
  * We specify that the kernel must have a length which is a multiple
@@ -181,6 +185,7 @@ int convolve_sse_partial_unroll(float* in, float* out, int length,
 
     return 0;
 }
+
 
 /* As convolve_sse_partial_unroll plus...
  *
@@ -262,5 +267,69 @@ int convolve_sse_in_aligned(float* in, float* out, int length,
 
     return 0;
 }
+
+/* In this case, the kernel is assumed to be a fixed length, this
+ * allows the compiler to do another level of loop unrolling.
+ */
+#define KERNEL_LENGTH 16
+int convolve_sse_in_aligned_fixed_kernel(float* in, float* out, int length,
+        float* kernel, int kernel_length)
+{
+    float kernel_block[4] __attribute__ ((aligned (16)));
+    float in_aligned[4][length] __attribute__ ((aligned (16)));
+
+    __m128 kernel_reverse[KERNEL_LENGTH] __attribute__ ((aligned (16)));    
+    __m128 data_block __attribute__ ((aligned (16)));
+
+    __m128 prod __attribute__ ((aligned (16)));
+    __m128 acc __attribute__ ((aligned (16)));
+
+    // Repeat the kernel across the vector
+    for(int i=0; i<KERNEL_LENGTH; i++){
+        kernel_block[0] = kernel[kernel_length - i - 1];
+        kernel_block[1] = kernel[kernel_length - i - 1];
+        kernel_block[2] = kernel[kernel_length - i - 1];
+        kernel_block[3] = kernel[kernel_length - i - 1];
+
+        kernel_reverse[i] = _mm_load_ps(kernel_block);
+    }
+
+    /* Create a set of 4 aligned arrays
+     * Each array is offset by one sample from the one before
+     */
+    for(int i=0; i<4; i++){
+        memcpy(in_aligned[i], (in+i), (length-i)*sizeof(float));
+    }
+
+    for(int i=0; i<length-kernel_length; i+=4){
+
+        acc = _mm_setzero_ps();
+
+        for(int k=0; k<KERNEL_LENGTH; k+=4){
+
+            int data_offset = i + k;
+
+            for (int l = 0; l < 4; l++){
+
+                data_block = _mm_load_ps(in_aligned[l] + data_offset);
+                prod = _mm_mul_ps(kernel_reverse[k+l], data_block);
+
+                acc = _mm_add_ps(acc, prod);
+            }
+        }
+        _mm_storeu_ps(out+i, acc);
+
+    }
+
+    // Need to do the last value as a special case
+    int i = length - kernel_length;
+    out[i] = 0.0;
+    for(int k=0; k<kernel_length; k++){
+        out[i] += in_aligned[0][i+k] * kernel[kernel_length - k - 1];
+    }
+
+    return 0;
+}
+
 
 #endif

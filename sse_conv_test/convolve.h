@@ -70,6 +70,11 @@ MULTIPLE_CONVOLVE(convolve_sse_partial_unroll);
 int convolve_sse_in_aligned(float* in, float* out, int length,
         float* kernel, int kernel_length);
 MULTIPLE_CONVOLVE(convolve_sse_in_aligned);
+
+int convolve_sse_in_aligned_fixed_kernel(float* in, float* out, int length,
+        float* kernel, int kernel_length);
+MULTIPLE_CONVOLVE(convolve_sse_in_aligned_fixed_kernel);
+
 #endif
 
 #endif /*Header guard*/
