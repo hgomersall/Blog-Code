@@ -53,6 +53,9 @@ def get_function_wrapper(function_name, input_array, output_array, kernel,
         raise ValueError('Output array should be of length '
                 'len(input_array) - len(kernel) + 1')
 
+    if len(input_array)%4 != 0:
+        raise ValueError('The input array should be divisible by 4.')
+
     lib = numpy.ctypeslib.load_library('libconvolve_funcs', '.')
 
     c_function = getattr(lib, function_name)

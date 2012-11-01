@@ -34,7 +34,7 @@
 
 #define INPUT_LENGTH 1024
 #define KERNEL_LENGTH 16
-#define N_LOOPS 10000
+#define N_LOOPS 1000
 #define N_TESTS 10
 
 #define INPUT_ARRAY input_data_1024
@@ -58,29 +58,38 @@ int main()
 
     struct timeval now, then;
 
-    long min_delta = -1;
-    long delta;
+    float min_delta = -1.0;
+    float delta;
     printf("Running %d tests of %d loops\n", N_TESTS, N_LOOPS);
 
     for (int j=0; j<N_TESTS; j++){
         gettimeofday(&then, NULL);
 
-        convolve_naive_multiple(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
+        //convolve_sse_in_aligned_multiple(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
+        //            KERNEL_LENGTH, N_LOOPS);
+        convolve_sse_partial_unroll_multiple(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
+        //            KERNEL_LENGTH, N_LOOPS);
+        //convolve_sse_simple_multiple(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
+        //            KERNEL_LENGTH, N_LOOPS);
+        //convolve_naive_multiple(INPUT_ARRAY, test_output, INPUT_LENGTH, KERNEL, 
                     KERNEL_LENGTH, N_LOOPS);
-        gettimeofday(&now, NULL);
-        delta = time_delta(&now, &then)/N_LOOPS;
 
-        min_delta = ((min_delta == -1) || 
+        gettimeofday(&now, NULL);
+        delta = ((float)time_delta(&now, &then))/N_LOOPS;
+
+        min_delta = ((min_delta == -1.0) || 
                 (delta < min_delta)) ? delta : min_delta;
     }
 
-    printf("Lowest test time: %li microseconds per loop.\n", 
+    printf("Lowest test time: %1.3f microseconds per loop.\n", 
             min_delta);
 
-    for (int i=0; i<INPUT_LENGTH-KERNEL_LENGTH+1; i++)
+    for (int i=0; i<INPUT_LENGTH-KERNEL_LENGTH+1; i++){
         if (TEST_OUTPUT_CORRECT[i] != test_output[i]){
             g_error("Computed convolution is incorrect.");
+            return(-1);
         }
+    }
 
     printf("Convolution is valid.\n");    
 

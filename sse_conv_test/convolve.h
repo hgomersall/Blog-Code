@@ -28,10 +28,48 @@
 #ifndef _CONVOLVE_H
 #define _CONVOLVE_H
 
-int convolve_naive_multiple(float* in, float* out, int length,
-        float* kernel, int kernel_length, int N);
+#ifdef SSE3
+#include <pmmintrin.h>
+#include <xmmintrin.h>
+#endif
+
+/* A macro that outputs a wrapper for each of the convolution routines.
+ * The macro passed a name conv_func will output a function called
+ * conv_func_multiple and it will have signature:
+ * conv_func_multiple(float* in, float* out, int length,
+ *                    float* kernel, int kernel_length, int N)
+ * 
+ * The additional N defines how many times to run the convolution function
+ * conv_func(float* in, float* out, int length,
+ *                    float* kernel, int kernel_length)
+ * */
+#define MULTIPLE_CONVOLVE(FUNCTION_NAME) \
+int FUNCTION_NAME ## _multiple(float* in, float* out, int length, \
+        float* kernel, int kernel_length, int N) \
+{ \
+    for(int i=0; i<N; i++){ \
+        FUNCTION_NAME(in, out, length, kernel, kernel_length); \
+    } \
+ \
+    return 0; \
+}
 
 int convolve_naive(float* in, float* out, int length,
         float* kernel, int kernel_length);
+MULTIPLE_CONVOLVE(convolve_naive);
 
+#ifdef SSE3
+int convolve_sse_simple(float* in, float* out, int length,
+        float* kernel, int kernel_length);
+MULTIPLE_CONVOLVE(convolve_sse_simple);
+
+int convolve_sse_partial_unroll(float* in, float* out, int length,
+        float* kernel, int kernel_length);
+MULTIPLE_CONVOLVE(convolve_sse_partial_unroll);
+
+int convolve_sse_in_aligned(float* in, float* out, int length,
+        float* kernel, int kernel_length);
+MULTIPLE_CONVOLVE(convolve_sse_in_aligned);
 #endif
+
+#endif /*Header guard*/
